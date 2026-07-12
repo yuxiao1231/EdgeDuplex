@@ -158,6 +158,7 @@ class EdgeDuplexApp:
             return
         
         # Check browser synchronously before background thread
+        delay_ms = 0
         try:
             self.save_config()
             self.btn_start.config(state=tk.DISABLED)
@@ -180,8 +181,7 @@ class EdgeDuplexApp:
                     self.action_lock.release()
                     return
                 subprocess.run(["taskkill", "/F", "/IM", exe_name, "/T"], capture_output=True, creationflags=CREATE_NO_WINDOW)
-                import time
-                time.sleep(1.5)
+                delay_ms = 1500
         except Exception:
             pass
 
@@ -207,7 +207,10 @@ class EdgeDuplexApp:
                 self.root.after(0, self.refresh_status_text)
                 self.action_lock.release()
 
-        threading.Thread(target=task, daemon=True).start()
+        if delay_ms > 0:
+            self.root.after(delay_ms, lambda: threading.Thread(target=task, daemon=True).start())
+        else:
+            threading.Thread(target=task, daemon=True).start()
 
     def do_stop(self, on_exit=False):
         if not self.action_lock.acquire(blocking=False):

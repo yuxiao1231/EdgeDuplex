@@ -80,9 +80,35 @@ if (-not $existing) {{
         subprocess.run(["route", "add", ip, "mask", "255.255.255.255", gateway, "metric", "1", "if", str(if_index)], capture_output=True, creationflags=CREATE_NO_WINDOW)
 
     @staticmethod
+    async def add_host_route_fast_async(ip: str, gateway: str, if_index: int) -> None:
+        import asyncio
+        CREATE_NO_WINDOW = 0x08000000
+        proc = await asyncio.create_subprocess_exec(
+            "route", "add", ip, "mask", "255.255.255.255", gateway, "metric", "1", "if", str(if_index),
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+            creationflags=CREATE_NO_WINDOW
+        )
+        await proc.wait()
+
+    @staticmethod
     def remove_host_route_fast(ip: str) -> None:
         CREATE_NO_WINDOW = 0x08000000
         subprocess.run(["route", "delete", ip], capture_output=True, creationflags=CREATE_NO_WINDOW)
+
+    @staticmethod
+    def remove_all_host_routes_fast(ips: list[str]) -> None:
+        if not ips:
+            return
+        # Use powershell for batch removal to avoid spinning up route.exe 100 times
+        ips_str = ",".join([RoutingManager.ps_quote(ip + "/32") for ip in ips])
+        script = f"""
+$ips = @({ips_str})
+if ($ips.Count -gt 0) {{
+    Get-NetRoute -ErrorAction SilentlyContinue | Where-Object {{ $ips -contains $_.DestinationPrefix }} | Remove-NetRoute -Confirm:$false -ErrorAction SilentlyContinue
+}}
+"""
+        RoutingManager.run_ps(script, check=False)
 
     @staticmethod
     def remove_host_route(ip: str, interface_alias: str, gateway: str) -> None:

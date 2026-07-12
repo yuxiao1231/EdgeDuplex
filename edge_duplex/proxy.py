@@ -28,6 +28,17 @@ class SocksProxy:
         self.server: Optional[asyncio.AbstractServer] = None
         self.routed_ips: set[str] = set()
         self.if_index = 0
+        self._save_task: Optional[asyncio.Task] = None
+
+    def schedule_save(self) -> None:
+        loop = asyncio.get_running_loop()
+        if self._save_task:
+            self._save_task.cancel()
+        async def delayed_save():
+            await asyncio.sleep(1.0)
+            from .state import runtime_state
+            runtime_state.save()
+        self._save_task = loop.create_task(delayed_save())
 
     async def start(self) -> None:
         try:
@@ -111,12 +122,12 @@ class SocksProxy:
         
         if self.force_routes and self.dns_server not in self.routed_ips and self.if_index:
             try:
-                RoutingManager.add_host_route_fast(self.dns_server, self.gateway, self.if_index)
+                await RoutingManager.add_host_route_fast_async(self.dns_server, self.gateway, self.if_index)
                 self.routed_ips.add(self.dns_server)
                 from .state import runtime_state
                 if self.dns_server not in runtime_state.added_routes:
                     runtime_state.added_routes.append(self.dns_server)
-                    runtime_state.save()
+                    self.schedule_save()
             except Exception as route_exc:
                 log(f"route add failed for DNS {self.dns_server}: {route_exc}")
 
@@ -175,12 +186,12 @@ class SocksProxy:
         for ip in ips:
             if self.force_routes and ip not in self.routed_ips and self.if_index:
                 try:
-                    RoutingManager.add_host_route_fast(ip, self.gateway, self.if_index)
+                    await RoutingManager.add_host_route_fast_async(ip, self.gateway, self.if_index)
                     self.routed_ips.add(ip)
                     from .state import runtime_state
                     if ip not in runtime_state.added_routes:
                         runtime_state.added_routes.append(ip)
-                        runtime_state.save()
+                        self.schedule_save()
                 except Exception as e:
                     log(f"Fast route add failed for {ip}: {e}")
 

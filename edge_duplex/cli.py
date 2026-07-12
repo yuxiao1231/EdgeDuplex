@@ -14,15 +14,21 @@ from .edge import EdgeLauncher
 from .proxy import SocksProxy, log
 
 def pid_alive(pid: int) -> bool:
+    if pid <= 0:
+        return False
     try:
-        CREATE_NO_WINDOW = 0x08000000
-        output = subprocess.check_output(
-            f'tasklist /FI "PID eq {pid}"', 
-            text=True, 
-            creationflags=CREATE_NO_WINDOW
-        )
-        return str(pid) in output
-    except subprocess.CalledProcessError:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        # PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        h_process = kernel32.OpenProcess(0x1000, False, pid)
+        if h_process == 0:
+            return False
+        exit_code = ctypes.c_ulong()
+        kernel32.GetExitCodeProcess(h_process, ctypes.byref(exit_code))
+        kernel32.CloseHandle(h_process)
+        # STILL_ACTIVE = 259
+        return exit_code.value == 259
+    except Exception:
         return False
 
 def free_port(preferred: int) -> int:
@@ -40,10 +46,10 @@ def free_port(preferred: int) -> int:
 def cleanup_from_state(verbose: bool = True) -> None:
     runtime_state.load()
     routes = runtime_state.added_routes[:]
-    for ip in routes:
-        RoutingManager.remove_host_route_fast(ip)
+    if routes:
+        RoutingManager.remove_all_host_routes_fast(routes)
         if verbose:
-            print(f"removed temporary route {ip}/32")
+            print(f"removed {len(routes)} temporary routes in batch")
     runtime_state.added_routes = []
 
     old_metrics = runtime_state.old_metrics

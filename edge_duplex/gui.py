@@ -84,11 +84,25 @@ class EdgeDuplexApp:
 
     def save_config(self, event=None):
         config.reverse_mode = self.var_reverse.get()
-        config.dns = self.entry_dns.get()
+        
+        import re
+        dns_input = self.entry_dns.get().strip()
+        if re.match(r"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$", dns_input):
+            config.dns = dns_input
+        else:
+            self.entry_dns.delete(0, tk.END)
+            self.entry_dns.insert(0, config.dns)
+            
         try:
-            config.port = int(self.entry_port.get())
+            port_input = int(self.entry_port.get().strip())
+            if 1 <= port_input <= 65535:
+                config.port = port_input
+            else:
+                raise ValueError
         except ValueError:
-            pass
+            self.entry_port.delete(0, tk.END)
+            self.entry_port.insert(0, str(config.port))
+            
         config.save()
 
     def on_lang_select(self, event=None):

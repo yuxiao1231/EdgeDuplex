@@ -4,6 +4,16 @@ All notable changes to EdgeDuplex are documented here.
 
 ---
 
+## [v2.0.2] - 2026-07-11
+
+### 🚀 Performance & Architecture Fixes
+- **Asynchronous Routing**: Upgraded underlying routing injection (`RoutingManager.add_host_route_fast`) to non-blocking asyncio, allowing dozens of concurrent IP allocations without freezing the main SOCKS5 event loop.
+- **State Save Debouncing**: Replaced synchronous JSON file writing with an asyncio `schedule_save` debouncer. The system now waits for 1 second of inactivity before saving disk state, eliminating `PermissionError` and file corruption during high concurrency.
+- **Silky Smooth GUI**: Reworked `pid_alive()` to bypass the slow `tasklist.exe` subshell. It now uses native Python `ctypes` (`kernel32.OpenProcess`) for zero-overhead process checking, and removed `time.sleep` blocking in `do_start()`.
+- **O(1) Batch Route Cleanup**: Exit cleanup routines now feed accumulated IPs into a bulk PowerShell `Remove-NetRoute` pipeline, reducing teardown time from several seconds to instantaneous.
+
+---
+
 ## [v2.0.1] - 2026-07-11
 
 ### 🔧 Fixed

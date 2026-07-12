@@ -4,6 +4,14 @@ All notable changes to EdgeDuplex are documented here.
 
 ---
 
+## [v2.0.1] - 2026-07-11
+
+### 🔧 Fixed
+- **GUI Input Validation**: Added strict IPv4 regex validation for the DNS input field and integer range validation (1-65535) for the Port input field. Invalid inputs are automatically reverted on focus loss, preventing `route add` injection failures and DoH resolution crashes.
+- **Automated Releases**: Restructured GitHub Actions to only trigger PyInstaller releases on tags matching `v*.*.*` instead of every push to main.
+
+---
+
 ## [v2.0.0] - 2026-07-11
 
 ### ✨ Major Features & Architecture Redesign

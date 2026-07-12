@@ -2,9 +2,8 @@ name: Build and Release
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    tags:
+      - "v*.*.*"
   workflow_dispatch:
 
 permissions:
@@ -41,7 +40,7 @@ jobs:
   create-release:
     needs: build-windows
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    if: startsWith(github.ref, 'refs/tags/v')
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -60,8 +59,8 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         draft: false
-        name: "EdgeDuplex Auto Release (Build ${{ github.run_number }})"
-        tag_name: "v2.0.0-b${{ github.run_number }}"
+        name: "EdgeDuplex ${{ github.ref_name }}"
+        tag_name: "${{ github.ref_name }}"
         files: |
           edge_duplex.exe
         body_path: release_notes.md
